@@ -104,7 +104,7 @@
       document.getElementById("results-section").hidden = false;
       document.getElementById("name").textContent = formatName(patient);
       document.getElementById("gender").textContent = patient.gender || "Not recorded";
-      document.getElementById("birth-date").textContent = patient.birthDate || "Not recorded";
+      document.getElementById("birth-date").textContent = formatBirthDate(patient.birthDate);
       document.getElementById("age").textContent = formatAge(patient.birthDate);
     }
 
