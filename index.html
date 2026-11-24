@@ -26,6 +26,8 @@
     .tracker-list { margin: 0; padding-left: 1.25rem; }
     .medication-group h3 { margin: 1rem 0 .35rem; font-size: 1.05rem; }
     .medication-group:first-child h3 { margin-top: 0; }
+    .medication-history { margin-top: .75rem; border-top: 1px solid #dbe2ea; }
+    .medication-history summary { padding: .75rem 0; cursor: pointer; font-weight: 700; }
     .tracker-list li { padding: .6rem 0; border-top: 1px solid #dbe2ea; }
     .tracker-list li:first-child { border-top: 0; }
     .tracker-detail { display: block; }
@@ -239,8 +241,8 @@
       var definitions = [
         { key: "active", title: "Active prescriptions", statuses: ["active"] },
         { key: "on-hold", title: "On hold", statuses: ["on-hold"] },
-        { key: "past", title: "Past prescriptions", statuses: ["cancelled", "completed", "stopped"] },
-        { key: "other", title: "Other statuses", statuses: ["draft", "unknown", "entered-in-error"] }
+        { key: "past", title: "Past prescriptions", statuses: ["cancelled", "completed", "stopped"], collapsed: true },
+        { key: "other", title: "Other statuses", statuses: ["draft", "unknown", "entered-in-error"], collapsed: true }
       ];
       var groups = { active: [], "on-hold": [], past: [], other: [] };
       items.forEach(function (item) {
@@ -253,11 +255,17 @@
       definitions.forEach(function (definition) {
         var groupItems = groups[definition.key];
         if (!groupItems.length) return;
-        var section = document.createElement("section");
-        section.className = "medication-group";
-        var heading = document.createElement("h3");
-        heading.textContent = definition.title;
-        section.appendChild(heading);
+        var section = document.createElement(definition.collapsed ? "details" : "div");
+        section.className = definition.collapsed ? "medication-group medication-history" : "medication-group";
+        if (definition.collapsed) {
+          var summary = document.createElement("summary");
+          summary.textContent = definition.title + " (" + groupItems.length + ")";
+          section.appendChild(summary);
+        } else {
+          var heading = document.createElement("h3");
+          heading.textContent = definition.title;
+          section.appendChild(heading);
+        }
         var list = document.createElement("ul");
         list.className = "tracker-list";
         groupItems.forEach(function (item) {
