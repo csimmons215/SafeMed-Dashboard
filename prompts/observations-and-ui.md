@@ -29,13 +29,13 @@ Search observations with the patient id from the authorized client, not a hardco
 Allergy and medication tracker:
 
 - Search `AllergyIntolerance` for the authorized patient only. Show recorded allergy substances, clinical status, and reaction details including severity when present. Do not imply that an empty allergy search confirms there are no allergies.
-- Search `MedicationRequest` for the authorized patient only, filtered to active prescriptions. Show medication name with a visible "Active" label beside each prescription, plus recorded dosage directions, including text, dose quantity, route, or timing when available. If dosage is absent, say it is not recorded and advise checking with a doctor or pharmacist.
+- Search `MedicationRequest` for the authorized patient only, without filtering to active status. Show medication name, recorded status, and dosage directions (text, dose quantity, route, or timing when available). Show statuses such as Active, On Hold, Cancelled, Completed, and Stopped as readable text with distinct colors; text must remain present so color is not the only cue. If dosage is absent, say it is not recorded and advise checking with a doctor or pharmacist.
 - Show a medication safety reminder: take medicines as prescribed, check with a doctor or pharmacist before changing a dose or starting a medicine, and seek emergency help for a suspected severe allergic reaction. Make clear the app does not check drug interactions or replace professional advice.
 - Give each tracker a loading state, useful empty state, and plain-language error. A failure in one tracker must not hide patient identity or the other sections.
 
 UI, on `index.html` only:
 
-- One page titled as the patient's record. Identity first (name, gender, birth date, age), then "Recent results", "Allergy alerts", "Active medications", and "Medication safety reminder" sections.
+- One page titled as the patient's record. Identity first (name, gender, birth date, age), then "Recent results", "Allergy alerts", "Prescriptions", and "Medication safety reminder" sections.
 - Patient-facing labels: Height, Blood pressure, HDL, LDL. Blood pressure displays as systolic/diastolic with the unit.
 - Show the number and the unit together. Show the date of the result when the resource has one.
 - Keep name formatting defensive: FHIR `name` is a list; do not assume `name[0].given` exists.
