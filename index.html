@@ -23,7 +23,7 @@
     .result-row dd { margin: 0; }
     .result-date { display: block; color: #465467; font-size: .92rem; }
     .status { padding: .8rem 1rem; border-left: .25rem solid #475569; background: #eef2f6; }
-    .tracker-list { margin: 0; padding-left: 1.25rem; }
+    .tracker-list { margin: 0; padding-left: 1.25rem; }\n    .medication-group h3 { margin: 1rem 0 .35rem; font-size: 1.05rem; }\n    .medication-group:first-child h3 { margin-top: 0; }
     .tracker-list li { padding: .6rem 0; border-top: 1px solid #dbe2ea; }
     .tracker-list li:first-child { border-top: 0; }
     .tracker-detail { display: block; }
@@ -88,7 +88,7 @@
     <section id="medications-section" hidden aria-labelledby="medications-heading">
       <h2 id="medications-heading">Prescriptions</h2>
       <p id="medications-status" class="status" role="status">Loading prescriptions…</p>
-      <ul id="medications-list" class="tracker-list" hidden></ul>
+      <div id="medications-list" hidden></div>
     </section>
 
     <section id="safety-reminder" hidden aria-labelledby="safety-heading">
@@ -225,49 +225,82 @@
         });
     }
 
-    // Shows medication name, recorded status, and dosage from MedicationRequest resources.
-    // The student should see a text status badge with color, directions, or a clear empty state.
+    // Groups MedicationRequest entries by status and displays name, dosage, and a colored text badge.
+    // The student should see active, on-hold, past, and other prescriptions in clearly separate groups.
     function renderMedications(items) {
       var status = document.getElementById("medications-status");
-      var list = document.getElementById("medications-list");
+      var container = document.getElementById("medications-list");
       if (!items.length) {
         status.textContent = "No prescriptions were found in this patient record.";
         return;
       }
+      var definitions = [
+        { key: "active", title: "Active prescriptions", statuses: ["active"] },
+        { key: "on-hold", title: "On hold", statuses: ["on-hold"] },
+        { key: "past", title: "Past prescriptions", statuses: ["cancelled", "completed", "stopped"] },
+        { key: "other", title: "Other statuses", statuses: ["draft", "unknown", "entered-in-error"] }
+      ];
+      var groups = { active: [], "on-hold": [], past: [], other: [] };
       items.forEach(function (item) {
-        var li = document.createElement("li");
-        var medication = conceptText(item.medicationCodeableConcept);
-        if (!medication && item.medicationReference && item.medicationReference.display) medication = item.medicationReference.display;
-        var heading = document.createElement("strong");
-        heading.textContent = medication || "Medication name not recorded";
-        li.appendChild(heading);
         var prescriptionStatus = item.status || "unknown";
-        var statusLabels = {
-          active: "Active",
-          "on-hold": "On Hold",
-          cancelled: "Cancelled",
-          completed: "Completed",
-          "entered-in-error": "Entered in Error",
-          stopped: "Stopped",
-          draft: "Draft",
-          unknown: "Unknown"
-        };
-        var statusLabel = document.createElement("span");
-        statusLabel.className = "med-status med-status-" + prescriptionStatus.replace(/[^a-z-]/g, "");
-        statusLabel.textContent = statusLabels[prescriptionStatus] || "Status: " + prescriptionStatus;
-        li.appendChild(statusLabel);
-        var instructions = Array.isArray(item.dosageInstruction) ? item.dosageInstruction : [];
-        if (!instructions.length) {
-          appendDetail(li, "Dosage: Not recorded. Check with your doctor or pharmacist.");
-        } else {
-          instructions.forEach(function (instruction) {
-            appendDetail(li, "Dosage: " + formatDosage(instruction));
-          });
-        }
-        list.appendChild(li);
+        var group = definitions.filter(function (definition) {
+          return definition.statuses.indexOf(prescriptionStatus) !== -1;
+        })[0];
+        groups[group ? group.key : "other"].push(item);
+      });
+      definitions.forEach(function (definition) {
+        var groupItems = groups[definition.key];
+        if (!groupItems.length) return;
+        var section = document.createElement("section");
+        section.className = "medication-group";
+        var heading = document.createElement("h3");
+        heading.textContent = definition.title;
+        section.appendChild(heading);
+        var list = document.createElement("ul");
+        list.className = "tracker-list";
+        groupItems.forEach(function (item) {
+          list.appendChild(createMedicationRow(item));
+        });
+        section.appendChild(list);
+        container.appendChild(section);
       });
       status.hidden = true;
-      list.hidden = false;
+      container.hidden = false;
+    }
+
+    // Builds one prescription row from its medication name, status, and dosage instructions.
+    // The student should see the prescribed directions and a readable text status badge.
+    function createMedicationRow(item) {
+      var li = document.createElement("li");
+      var medication = conceptText(item.medicationCodeableConcept);
+      if (!medication && item.medicationReference && item.medicationReference.display) medication = item.medicationReference.display;
+      var heading = document.createElement("strong");
+      heading.textContent = medication || "Medication name not recorded";
+      li.appendChild(heading);
+      var prescriptionStatus = item.status || "unknown";
+      var statusLabels = {
+        active: "Active",
+        "on-hold": "On Hold",
+        cancelled: "Cancelled",
+        completed: "Completed",
+        "entered-in-error": "Entered in Error",
+        stopped: "Stopped",
+        draft: "Draft",
+        unknown: "Unknown"
+      };
+      var statusLabel = document.createElement("span");
+      statusLabel.className = "med-status med-status-" + prescriptionStatus.replace(/[^a-z-]/g, "");
+      statusLabel.textContent = statusLabels[prescriptionStatus] || "Status: " + prescriptionStatus;
+      li.appendChild(statusLabel);
+      var instructions = Array.isArray(item.dosageInstruction) ? item.dosageInstruction : [];
+      if (!instructions.length) {
+        appendDetail(li, "Dosage: Not recorded. Check with your doctor or pharmacist.");
+      } else {
+        instructions.forEach(function (instruction) {
+          appendDetail(li, "Dosage: " + formatDosage(instruction));
+        });
+      }
+      return li;
     }
 
     // Formats recorded dosage text, dose quantity, route, and timing from a FHIR Dosage.
