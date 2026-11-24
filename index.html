@@ -29,6 +29,10 @@
     .tracker-detail { display: block; }
     .alert-label { font-weight: 700; }
     .med-status { display: inline-block; margin-left: .5rem; padding: .1rem .45rem; border: 1px solid #526174; border-radius: 999px; font-size: .85rem; font-weight: 650; }
+    .med-status-active { color: #17472a; background: #e3f3e8; border-color: #34744a; }
+    .med-status-on-hold { color: #563e00; background: #fff2c2; border-color: #8a6900; }
+    .med-status-cancelled, .med-status-completed, .med-status-draft, .med-status-unknown { color: #26364a; background: #e8edf3; border-color: #65758a; }
+    .med-status-stopped, .med-status-entered-in-error { color: #651717; background: #fff1f1; border-color: #9b1c1c; }
     .error { border-left-color: #9b1c1c; color: #651717; background: #fff1f1; }
     a { color: #064f9e; }
     a:focus-visible { outline: 3px solid #1d70c9; outline-offset: 3px; }
@@ -82,8 +86,8 @@
     </section>
 
     <section id="medications-section" hidden aria-labelledby="medications-heading">
-      <h2 id="medications-heading">Active medications</h2>
-      <p id="medications-status" class="status" role="status">Loading active prescriptions…</p>
+      <h2 id="medications-heading">Prescriptions</h2>
+      <p id="medications-status" class="status" role="status">Loading prescriptions…</p>
       <ul id="medications-list" class="tracker-list" hidden></ul>
     </section>
 
@@ -111,7 +115,7 @@
           return Promise.all([
             loadObservations(client, patient.id),
             loadAllergies(client, patient.id),
-            loadActiveMedications(client, patient.id)
+            loadMedicationRequests(client, patient.id)
           ]);
         });
       })
@@ -206,28 +210,28 @@
       list.hidden = false;
     }
 
-    // Requests active MedicationRequest records for the authorized patient id and reads Bundle entries.
-    // The student should see prescriptions with dosage instructions or a clear empty/error state.
-    function loadActiveMedications(client, patientId) {
+    // Requests MedicationRequest records for the authorized patient id and reads Bundle entries.
+    // The student should see prescriptions with recorded statuses and dosage, or a clear empty/error state.
+    function loadMedicationRequests(client, patientId) {
       return client.request("MedicationRequest?subject=" + encodeURIComponent("Patient/" + patientId)
-          + "&status=active&_count=100")
+          + "&_count=100")
         .then(function (bundle) {
           var items = bundle && Array.isArray(bundle.entry)
             ? bundle.entry.map(function (entry) { return entry.resource; }).filter(Boolean)
             : [];
           renderMedications(items);
         }).catch(function () {
-          setTrackerError("medications-status", "We could not load active prescriptions. Please check with your doctor or pharmacist for your current medication list.");
+          setTrackerError("medications-status", "We could not load prescriptions. Please check with your doctor or pharmacist for your current medication list.");
         });
     }
 
-    // Shows medication name and dosage instructions from active MedicationRequest resources.
-    // The student should see recorded directions or be told to verify missing dosage details.
+    // Shows medication name, recorded status, and dosage from MedicationRequest resources.
+    // The student should see a text status badge with color, directions, or a clear empty state.
     function renderMedications(items) {
       var status = document.getElementById("medications-status");
       var list = document.getElementById("medications-list");
       if (!items.length) {
-        status.textContent = "No active prescriptions were found in this patient record.";
+        status.textContent = "No prescriptions were found in this patient record.";
         return;
       }
       items.forEach(function (item) {
@@ -237,10 +241,21 @@
         var heading = document.createElement("strong");
         heading.textContent = medication || "Medication name not recorded";
         li.appendChild(heading);
-        var activeLabel = document.createElement("span");
-        activeLabel.className = "med-status";
-        activeLabel.textContent = "Active";
-        li.appendChild(activeLabel);
+        var prescriptionStatus = item.status || "unknown";
+        var statusLabels = {
+          active: "Active",
+          "on-hold": "On Hold",
+          cancelled: "Cancelled",
+          completed: "Completed",
+          "entered-in-error": "Entered in Error",
+          stopped: "Stopped",
+          draft: "Draft",
+          unknown: "Unknown"
+        };
+        var statusLabel = document.createElement("span");
+        statusLabel.className = "med-status med-status-" + prescriptionStatus.replace(/[^a-z-]/g, "");
+        statusLabel.textContent = statusLabels[prescriptionStatus] || "Status: " + prescriptionStatus;
+        li.appendChild(statusLabel);
         var instructions = Array.isArray(item.dosageInstruction) ? item.dosageInstruction : [];
         if (!instructions.length) {
           appendDetail(li, "Dosage: Not recorded. Check with your doctor or pharmacist.");
