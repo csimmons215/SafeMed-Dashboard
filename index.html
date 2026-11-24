@@ -28,6 +28,7 @@
     .tracker-list li:first-child { border-top: 0; }
     .tracker-detail { display: block; }
     .alert-label { font-weight: 700; }
+    .med-status { display: inline-block; margin-left: .5rem; padding: .1rem .45rem; border: 1px solid #526174; border-radius: 999px; font-size: .85rem; font-weight: 650; }
     .error { border-left-color: #9b1c1c; color: #651717; background: #fff1f1; }
     a { color: #064f9e; }
     a:focus-visible { outline: 3px solid #1d70c9; outline-offset: 3px; }
@@ -236,6 +237,10 @@
         var heading = document.createElement("strong");
         heading.textContent = medication || "Medication name not recorded";
         li.appendChild(heading);
+        var activeLabel = document.createElement("span");
+        activeLabel.className = "med-status";
+        activeLabel.textContent = "Active";
+        li.appendChild(activeLabel);
         var instructions = Array.isArray(item.dosageInstruction) ? item.dosageInstruction : [];
         if (!instructions.length) {
           appendDetail(li, "Dosage: Not recorded. Check with your doctor or pharmacist.");
