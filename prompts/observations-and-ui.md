@@ -29,7 +29,7 @@ Search observations with the patient id from the authorized client, not a hardco
 Allergy and medication tracker:
 
 - Search `AllergyIntolerance` for the authorized patient only. Show recorded allergy substances, clinical status, and reaction details including severity when present. Do not imply that an empty allergy search confirms there are no allergies.
-- Search `MedicationRequest` for the authorized patient only, filtered to active prescriptions. Show medication name and recorded dosage directions, including text, dose quantity, route, or timing when available. If dosage is absent, say it is not recorded and advise checking with a doctor or pharmacist.
+- Search `MedicationRequest` for the authorized patient only, filtered to active prescriptions. Show medication name with a visible "Active" label beside each prescription, plus recorded dosage directions, including text, dose quantity, route, or timing when available. If dosage is absent, say it is not recorded and advise checking with a doctor or pharmacist.
 - Show a medication safety reminder: take medicines as prescribed, check with a doctor or pharmacist before changing a dose or starting a medicine, and seek emergency help for a suspected severe allergic reaction. Make clear the app does not check drug interactions or replace professional advice.
 - Give each tracker a loading state, useful empty state, and plain-language error. A failure in one tracker must not hide patient identity or the other sections.
 
