@@ -23,6 +23,11 @@
     .result-row dd { margin: 0; }
     .result-date { display: block; color: #465467; font-size: .92rem; }
     .status { padding: .8rem 1rem; border-left: .25rem solid #475569; background: #eef2f6; }
+    .tracker-list { margin: 0; padding-left: 1.25rem; }
+    .tracker-list li { padding: .6rem 0; border-top: 1px solid #dbe2ea; }
+    .tracker-list li:first-child { border-top: 0; }
+    .tracker-detail { display: block; }
+    .alert-label { font-weight: 700; }
     .error { border-left-color: #9b1c1c; color: #651717; background: #fff1f1; }
     a { color: #064f9e; }
     a:focus-visible { outline: 3px solid #1d70c9; outline-offset: 3px; }
@@ -69,6 +74,24 @@
       </dl>
     </section>
 
+    <section id="allergies-section" hidden aria-labelledby="allergies-heading">
+      <h2 id="allergies-heading">Allergy alerts</h2>
+      <p id="allergies-status" class="status" role="status">Loading allergy information…</p>
+      <ul id="allergies-list" class="tracker-list" hidden></ul>
+    </section>
+
+    <section id="medications-section" hidden aria-labelledby="medications-heading">
+      <h2 id="medications-heading">Active medications</h2>
+      <p id="medications-status" class="status" role="status">Loading active prescriptions…</p>
+      <ul id="medications-list" class="tracker-list" hidden></ul>
+    </section>
+
+    <section id="safety-reminder" hidden aria-labelledby="safety-heading">
+      <h2 id="safety-heading">Medication safety reminder</h2>
+      <p>Take medicines only as prescribed. Check with your doctor or pharmacist before changing a dose or starting a new medicine. If you think you may be having a severe allergic reaction, seek emergency help.</p>
+      <p>Keep your allergy and medication lists up to date with your care team. This dashboard displays information from your health record and does not check for drug interactions.</p>
+    </section>
+
     <p id="error" class="status error" role="alert" hidden></p>
   </main>
   <script>
@@ -81,7 +104,14 @@
       .then(function (client) {
         return client.patient.read().then(function (patient) {
           showPatient(patient);
-          return loadObservations(client, patient.id);
+          document.getElementById("allergies-section").hidden = false;
+          document.getElementById("medications-section").hidden = false;
+          document.getElementById("safety-reminder").hidden = false;
+          return Promise.all([
+            loadObservations(client, patient.id),
+            loadAllergies(client, patient.id),
+            loadActiveMedications(client, patient.id)
+          ]);
         });
       })
       .catch(function (error) {
@@ -126,6 +156,155 @@
         status.textContent = "We could not load your results. Your patient identity is still available. " + errorMessage(error);
         status.classList.add("error");
       });
+    }
+
+    // Requests AllergyIntolerance records for the authorized patient id and reads their Bundle entries.
+    // The student should see recorded allergy alerts, a clear empty state, or a plain-language error.
+    function loadAllergies(client, patientId) {
+      return client.request("AllergyIntolerance?patient=" + encodeURIComponent(patientId) + "&_count=100")
+        .then(function (bundle) {
+          var items = bundle && Array.isArray(bundle.entry)
+            ? bundle.entry.map(function (entry) { return entry.resource; }).filter(Boolean)
+            : [];
+          renderAllergies(items);
+        }).catch(function () {
+          setTrackerError("allergies-status", "We could not load allergy information. Your care team can confirm your current allergies.");
+        });
+    }
+
+    // Shows allergy substance, status, and recorded reaction severity from AllergyIntolerance.
+    // The student should see prominent text alerts without relying on color alone.
+    function renderAllergies(items) {
+      var status = document.getElementById("allergies-status");
+      var list = document.getElementById("allergies-list");
+      var visible = items.filter(function (item) {
+        return !hasCode(item.verificationStatus, "entered-in-error");
+      });
+      if (!visible.length) {
+        status.textContent = "No allergy records were found. This does not confirm that the patient has no allergies.";
+        return;
+      }
+      visible.forEach(function (item) {
+        var li = document.createElement("li");
+        var name = document.createElement("span");
+        name.className = "alert-label";
+        name.textContent = conceptText(item.code) || "Allergy substance not recorded";
+        li.appendChild(name);
+        var clinical = conceptText(item.clinicalStatus);
+        if (clinical) appendDetail(li, "Status: " + clinical);
+        if (hasCode(item.verificationStatus, "unconfirmed")) appendDetail(li, "Unconfirmed allergy record");
+        (Array.isArray(item.reaction) ? item.reaction : []).forEach(function (reaction) {
+          var detail = conceptText(reaction.manifestation && reaction.manifestation[0]) || "";
+          var severity = reaction.severity ? "Severity: " + reaction.severity : "";
+          var text = [detail, severity].filter(Boolean).join(" · ");
+          if (text) appendDetail(li, text);
+        });
+        list.appendChild(li);
+      });
+      status.hidden = true;
+      list.hidden = false;
+    }
+
+    // Requests active MedicationRequest records for the authorized patient id and reads Bundle entries.
+    // The student should see prescriptions with dosage instructions or a clear empty/error state.
+    function loadActiveMedications(client, patientId) {
+      return client.request("MedicationRequest?subject=" + encodeURIComponent("Patient/" + patientId)
+          + "&status=active&_count=100")
+        .then(function (bundle) {
+          var items = bundle && Array.isArray(bundle.entry)
+            ? bundle.entry.map(function (entry) { return entry.resource; }).filter(Boolean)
+            : [];
+          renderMedications(items);
+        }).catch(function () {
+          setTrackerError("medications-status", "We could not load active prescriptions. Please check with your doctor or pharmacist for your current medication list.");
+        });
+    }
+
+    // Shows medication name and dosage instructions from active MedicationRequest resources.
+    // The student should see recorded directions or be told to verify missing dosage details.
+    function renderMedications(items) {
+      var status = document.getElementById("medications-status");
+      var list = document.getElementById("medications-list");
+      if (!items.length) {
+        status.textContent = "No active prescriptions were found in this patient record.";
+        return;
+      }
+      items.forEach(function (item) {
+        var li = document.createElement("li");
+        var medication = conceptText(item.medicationCodeableConcept);
+        if (!medication && item.medicationReference && item.medicationReference.display) medication = item.medicationReference.display;
+        var heading = document.createElement("strong");
+        heading.textContent = medication || "Medication name not recorded";
+        li.appendChild(heading);
+        var instructions = Array.isArray(item.dosageInstruction) ? item.dosageInstruction : [];
+        if (!instructions.length) {
+          appendDetail(li, "Dosage: Not recorded. Check with your doctor or pharmacist.");
+        } else {
+          instructions.forEach(function (instruction) {
+            appendDetail(li, "Dosage: " + formatDosage(instruction));
+          });
+        }
+        list.appendChild(li);
+      });
+      status.hidden = true;
+      list.hidden = false;
+    }
+
+    // Formats recorded dosage text, dose quantity, route, and timing from a FHIR Dosage.
+    // The student should see prescribed directions as available in the patient record.
+    function formatDosage(instruction) {
+      var parts = [];
+      if (instruction.text) parts.push(instruction.text);
+      var dose = Array.isArray(instruction.doseAndRate) ? instruction.doseAndRate[0] : null;
+      if (!instruction.text && dose && dose.doseQuantity) {
+        var quantity = dose.doseQuantity;
+        parts.push(String(quantity.value) + (quantity.unit ? " " + quantity.unit : ""));
+      }
+      var route = conceptText(instruction.route);
+      if (route) parts.push("by " + route);
+      var timing = instruction.timing;
+      if (timing && timing.code) {
+        var frequency = conceptText(timing.code);
+        if (frequency) parts.push(frequency);
+      }
+      return parts.join(", ") || "Not recorded. Check with your doctor or pharmacist.";
+    }
+
+    // Reads display text or a code from a FHIR CodeableConcept.
+    // The student should see readable allergy, medication, reaction, and route labels.
+    function conceptText(concept) {
+      if (!concept) return "";
+      if (concept.text) return concept.text;
+      var coding = Array.isArray(concept.coding) ? concept.coding : [];
+      for (var i = 0; i < coding.length; i += 1) {
+        if (coding[i].display) return coding[i].display;
+      }
+      return coding.length && coding[0].code ? coding[0].code : "";
+    }
+
+    // Checks whether a CodeableConcept contains a given code.
+    // The student should see unconfirmed allergy records identified clearly.
+    function hasCode(concept, code) {
+      return !!(concept && Array.isArray(concept.coding) && concept.coding.some(function (coding) {
+        return coding.code === code;
+      }));
+    }
+
+    // Adds supporting text to an allergy or medication list item.
+    // The student should see status, reaction, and dosage details as readable text.
+    function appendDetail(parent, text) {
+      var detail = document.createElement("span");
+      detail.className = "tracker-detail";
+      detail.textContent = text;
+      parent.appendChild(detail);
+    }
+
+    // Shows an error in one tracker while keeping patient identity and other data visible.
+    // The student should see what failed and what to verify with their care team.
+    function setTrackerError(elementId, message) {
+      var status = document.getElementById(elementId);
+      status.textContent = message;
+      status.classList.add("error");
     }
 
     // Chooses the newest resource by effectiveDateTime, falling back to issued.
