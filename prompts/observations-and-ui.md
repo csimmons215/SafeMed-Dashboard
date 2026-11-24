@@ -1,6 +1,6 @@
 # Student prompt — SafeMed Dashboard
 
-Paste everything under the line into an AI session that has this repo open. The app already signs in and shows the Patient. This prompt adds patient-specific observations, allergy alerts, active prescriptions with dosage, and a medication safety reminder.
+Paste everything under the line into an AI session that has this repo open. The app already signs in and shows the Patient. This prompt adds patient-specific observations, allergy alerts, prescriptions across statuses with dosage, and a medication safety reminder.
 
 Students must sign out and sign in again after the scope change, or the new read is rejected.
 
@@ -48,4 +48,4 @@ Also return:
 
 - The files you changed
 - The new scope string
-- A short test list: sign in again to grant new scopes; confirm identity remains; confirm each observation row or its empty state; confirm allergy and active medication sections show data, empty states, or errors; confirm a patient with no matching data does not break the page.
+- A short test list: sign in again to grant new scopes; confirm identity remains; confirm each observation row or its empty state; confirm allergy and prescription sections show data, readable status labels, empty states, or errors; confirm a patient with no matching data does not break the page.
