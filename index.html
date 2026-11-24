@@ -239,8 +239,8 @@
         return;
       }
       var definitions = [
-        { key: "active", title: "Active prescriptions", statuses: ["active"] },
-        { key: "on-hold", title: "On hold", statuses: ["on-hold"] },
+        { key: "active", title: "Active prescriptions", statuses: ["active"], collapsed: true },
+        { key: "on-hold", title: "On hold", statuses: ["on-hold"], collapsed: true },
         { key: "past", title: "Past prescriptions", statuses: ["cancelled", "completed", "stopped"], collapsed: true },
         { key: "other", title: "Other statuses", statuses: ["draft", "unknown", "entered-in-error"], collapsed: true }
       ];
